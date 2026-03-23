@@ -9,9 +9,17 @@ Pipeline:
   3. Instantiate + validate strategy.
   4. Vectorised signal generation → thread pool.
   5. Trade simulation → thread pool.
-  6. Performance synthesis (all Image 2 statistics).
+  6. Performance synthesis (all statistics).
   7. Generate interactive Plotly HTML chart.
-  8. Return BacktestRunResponse.
+  8. Persist result to BACKTESTS table (real DB — replaces stub).
+  9. Return BacktestRunResponse.
+
+DB persistence (step 8):
+  Looks up STRATEGIES row by type_code, then inserts into BACKTESTS with:
+    - parameters : full BacktestParameters dict
+    - metrics    : full BacktestStatistics dict
+    - result_file_url : None (Supabase Storage upload is a future enhancement)
+  Gracefully no-ops when DATABASE_URL is not configured.
 """
 
 from __future__ import annotations
@@ -21,10 +29,14 @@ import logging
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from typing import Optional
 
 import pandas as pd
 
 from app.core.config import settings
+from app.crud.backtests import create_backtest
+from app.crud.strategies import get_strategy_by_type_code
+from app.db.session import get_db
 from app.modules.backtest.chart_generator import generate_chart
 from app.modules.backtest.data_cache import get_historical_data
 from app.modules.backtest.performance import simulate_trades, synthesize
@@ -51,15 +63,17 @@ class BacktestError(RuntimeError):
 
 
 async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
+    """Primary entry point — called by the API route handler."""
     backtest_id = str(uuid.uuid4())
     created_at  = datetime.now(tz=timezone.utc)
+
     logger.info(
         "Backtest %s | %s %s %s [%s → %s]",
         backtest_id, request.strategy.value, request.symbol,
         request.interval.value, request.start_date, request.end_date,
     )
 
-    # 1. Fetch K-lines (LRU cached)
+    # ── 1. Fetch K-lines ──────────────────────────────────────────────────────
     try:
         bars = await get_historical_data(
             market=request.trading_market.value,
@@ -80,10 +94,10 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
             "Check the symbol name and date range."
         )
 
-    # 2. Build DataFrame
+    # ── 2. Build DataFrame ────────────────────────────────────────────────────
     df = _bars_to_dataframe(bars)
 
-    # 3. Strategy
+    # ── 3. Strategy ───────────────────────────────────────────────────────────
     try:
         strategy = get_strategy(request.strategy.value, request.strategy_config)
     except KeyError as exc:
@@ -98,7 +112,7 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
             "Extend the date range or use a shorter interval."
         )
 
-    # 4. Signal generation (thread pool — CPU-bound)
+    # ── 4. Signal generation (thread pool) ───────────────────────────────────
     loop = asyncio.get_running_loop()
     try:
         df_signals = await loop.run_in_executor(
@@ -107,7 +121,7 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
     except Exception as exc:
         raise BacktestError(f"Signal generation failed: {exc}") from exc
 
-    # 5. Trade simulation (thread pool)
+    # ── 5. Trade simulation (thread pool) ────────────────────────────────────
     try:
         equity_curve, raw_trades, final_value, commissions_paid = \
             await loop.run_in_executor(
@@ -116,7 +130,7 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
     except Exception as exc:
         raise BacktestError(f"Trade simulation failed: {exc}") from exc
 
-    # 6. Performance synthesis
+    # ── 6. Performance synthesis ──────────────────────────────────────────────
     statistics, trade_records = synthesize(
         equity_curve=equity_curve,
         raw_trades=raw_trades,
@@ -125,7 +139,7 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
         commissions_paid=commissions_paid,
     )
 
-    # 7. Generate interactive Plotly chart
+    # ── 7. Plotly chart ───────────────────────────────────────────────────────
     try:
         chart_html = await loop.run_in_executor(
             _thread_pool,
@@ -137,7 +151,7 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
         logger.warning("Chart generation failed (non-fatal): %s", exc)
         chart_html = "<p>Chart unavailable</p>"
 
-    # 8. Assemble response
+    # ── 8. Assemble response ──────────────────────────────────────────────────
     duration_days = (request.end_date - request.start_date).days
 
     parameters = BacktestParameters(
@@ -182,8 +196,78 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
         statistics.total_return_pct, statistics.sharpe_ratio,
     )
 
-    await _persist_result_stub(backtest_id, request, response)
+    # ── 9. Persist to BACKTESTS table (real DB) ───────────────────────────────
+    await _persist_result(
+        backtest_id=backtest_id,
+        request=request,
+        parameters=parameters,
+        statistics=statistics,
+    )
+
     return response
+
+
+# ─── DB persistence ───────────────────────────────────────────────────────────
+
+async def _persist_result(
+    backtest_id: str,
+    request:     BacktestRunRequest,
+    parameters:  BacktestParameters,
+    statistics,
+) -> None:
+    """
+    Persist the backtest result to the BACKTESTS table.
+
+    Flow:
+      1. Open a DB session (no-ops gracefully if DATABASE_URL is unset).
+      2. Look up the STRATEGIES row by type_code to get the strategy_id FK.
+      3. Insert into BACKTESTS:
+           - parameters : full execution config as JSONB
+           - metrics    : scalar stats as JSONB
+           - result_file_url : None (Supabase Storage upload is future work)
+    """
+    async with get_db() as session:
+        if session is None:
+            logger.debug("DB not configured — skipping backtest persistence.")
+            return
+
+        try:
+            # Resolve strategy FK
+            strategy_row = await get_strategy_by_type_code(
+                session, request.strategy.value
+            )
+            if strategy_row is None:
+                logger.error(
+                    "Strategy type_code '%s' not found in STRATEGIES table. "
+                    "Did the seed run on startup?",
+                    request.strategy.value,
+                )
+                return
+
+            # Serialise statistics to a plain dict for JSONB storage
+            metrics_dict = statistics.model_dump()
+
+            row = await create_backtest(
+                session=session,
+                user_id=request.user_id,           # None until Module 1 auth
+                strategy_id=strategy_row.id,
+                symbol=request.symbol,
+                timeframe=request.interval.value,
+                parameters=parameters.model_dump(),
+                metrics=metrics_dict,
+                result_file_url=None,              # Supabase Storage: future
+            )
+            logger.info(
+                "Backtest persisted to DB: db_id=%s backtest_id=%s",
+                row.id, backtest_id,
+            )
+
+        except Exception as exc:
+            logger.error(
+                "Failed to persist backtest %s to DB: %s",
+                backtest_id, exc, exc_info=True,
+            )
+            # Non-fatal — the API response is already assembled
 
 
 # ─── Sync helpers (run in thread pool) ───────────────────────────────────────
@@ -224,8 +308,3 @@ def _bars_to_dataframe(bars: list[OHLCV]) -> pd.DataFrame:
     for col in ("open", "high", "low", "close", "volume"):
         df[col] = pd.to_numeric(df[col], errors="coerce")
     return df.dropna(subset=["open", "high", "low", "close"])
-
-
-async def _persist_result_stub(backtest_id, request, response) -> None:
-    """Replace with asyncpg insert when Module 4 DB layer is ready."""
-    logger.debug("DB persist stub — %s (no-op)", backtest_id)

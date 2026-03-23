@@ -2,14 +2,7 @@
 app/core/config.py
 ──────────────────
 Centralised settings loaded from environment variables / .env file.
-
-Integration hooks for other modules:
-  - Module 1 (Auth):    SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
-  - Module 3 (Stream):  BINANCE_TESTNET_BASE_URL / BINANCE_MAINNET_BASE_URL
-  - Module 4 (Bot):     DATABASE_URL (for state checkpointing)
-  - Module 5 (Order):   reuses Binance URLs defined here
 """
-
 from __future__ import annotations
 
 from functools import lru_cache
@@ -26,7 +19,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── App ──────────────────────────────────────────────────────────────────
+    # ── App ───────────────────────────────────────────────────────────────────
     APP_NAME: str = "Algo Kaisen"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
@@ -35,29 +28,34 @@ class Settings(BaseSettings):
     # ── Binance ───────────────────────────────────────────────────────────────
     BINANCE_TESTNET_BASE_URL: str = "https://testnet.binance.vision"
     BINANCE_MAINNET_BASE_URL: str = "https://api.binance.com"
-    # Testnet has limited K-line history; leave False to hit public mainnet endpoints.
     BINANCE_USE_TESTNET_FOR_HISTORY: bool = False
 
-    # ── Rate Limiting (per HLD §5.2: 10 req/min for /backtest/run) ───────────
-    BACKTEST_RATE_LIMIT: int = 10        # requests …
-    BACKTEST_RATE_LIMIT_WINDOW: int = 60  # … per N seconds
+    # ── Rate Limiting ─────────────────────────────────────────────────────────
+    BACKTEST_RATE_LIMIT: int = 10
+    BACKTEST_RATE_LIMIT_WINDOW: int = 60
 
-    # ── LRU Cache for Historical Data ────────────────────────────────────────
-    HISTORICAL_CACHE_TTL: int = 3600     # seconds
-    HISTORICAL_CACHE_MAXSIZE: int = 256  # entries
+    # ── LRU Cache ─────────────────────────────────────────────────────────────
+    HISTORICAL_CACHE_TTL: int = 3600
+    HISTORICAL_CACHE_MAXSIZE: int = 256
 
-    # ── Thread Pool (vectorised backtest off-loading per HLD §4.2) ───────────
+    # ── Thread Pool ───────────────────────────────────────────────────────────
     BACKTEST_THREAD_POOL_SIZE: int = 4
 
-    # ── Supabase – Module 1 integration stub ─────────────────────────────────
+    # ── Supabase / Auth ───────────────────────────────────────────────────────
     SUPABASE_URL: Optional[str] = None
     SUPABASE_ANON_KEY: Optional[str] = None
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
 
-    # ── Database – Module 4 integration stub ─────────────────────────────────
+    # ── Database (async PostgreSQL / Supabase) ────────────────────────────────
+    # Format: postgresql+asyncpg://user:password@host:port/dbname
+    # For Supabase: postgresql+asyncpg://postgres:<password>@db.<project>.supabase.co:5432/postgres
     DATABASE_URL: Optional[str] = None
 
-    # ── CORS ─────────────────────────────────────────────────────────────────
+    # ── Supabase Storage (for equity-curve files) ─────────────────────────────
+    # Bucket name where heavy equity_curve arrays are stored as JSON
+    STORAGE_BUCKET: str = "backtest-results"
+
+    # ── CORS ──────────────────────────────────────────────────────────────────
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     @field_validator("CORS_ORIGINS", mode="before")
@@ -70,12 +68,16 @@ class Settings(BaseSettings):
 
     @property
     def binance_history_base_url(self) -> str:
-        """Resolved Binance base URL for historical K-line fetching."""
         return (
             self.BINANCE_TESTNET_BASE_URL
             if self.BINANCE_USE_TESTNET_FOR_HISTORY
             else self.BINANCE_MAINNET_BASE_URL
         )
+
+    @property
+    def db_enabled(self) -> bool:
+        """True when a DATABASE_URL is configured."""
+        return bool(self.DATABASE_URL)
 
 
 @lru_cache(maxsize=1)

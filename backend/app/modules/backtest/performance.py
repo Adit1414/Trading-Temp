@@ -3,7 +3,7 @@ app/modules/backtest/performance.py
 ────────────────────────────────────
 Performance Synthesizer — HLD §4.2
 
-Computes the full statistics set shown on the Numatix Statistics tab (Image 2):
+Computes the full statistics set:
   Equity Final/Peak, Return, Exposure Time, Annualised Return,
   Annualised Volatility, CAGR, Buy & Hold Return, Alpha, Beta,
   Sharpe, Sortino, Calmar, Max/Avg Drawdown + Durations,
@@ -160,7 +160,7 @@ def synthesize(
     commissions_paid: float,
 ) -> Tuple[BacktestStatistics, List[TradeRecord]]:
     """
-    Build all statistics from Image 2 (Numatix Statistics tab).
+    Build all statistics.
     """
     closed = [t for t in raw_trades if t["status"] == "CLOSED"]
     open_  = [t for t in raw_trades if t["status"] == "OPEN"]

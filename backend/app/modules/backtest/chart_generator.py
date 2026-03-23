@@ -1,7 +1,7 @@
 """
 app/modules/backtest/chart_generator.py
 ─────────────────────────────────────────
-Interactive Plotly chart generator — matches the Numatix backtest chart (Image 1).
+Interactive Plotly chart generator.
 
 Produces a fully self-contained HTML string with NO external CDN dependencies
 (plotly.js is embedded inline) so the frontend can inject it into an <iframe> or
@@ -172,7 +172,7 @@ def generate_chart(
     ), row=3, col=1)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # Layout styling (dark theme matching Numatix UI)
+    # Layout styling (dark theme)
     # ══════════════════════════════════════════════════════════════════════════
     fig.update_layout(
         template="plotly_dark",

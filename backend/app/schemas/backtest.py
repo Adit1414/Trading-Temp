@@ -4,7 +4,7 @@ app/schemas/backtest.py
 All Pydantic request / response models for the Backtesting Engine.
 
 Parameter ranges sourced from trading_strategy_parameters.xlsx.
-Statistics output sourced from the Numatix Statistics tab (Image 2).
+Statistics output.
 """
 
 from __future__ import annotations
@@ -306,11 +306,11 @@ class TradeRecord(BaseModel):
     status:        str              # OPEN | CLOSED
 
 
-# ─── Response: full statistics (Image 2 — Numatix Statistics tab) ────────────
+# ─── Response: full statistics ────────────
 
 class BacktestStatistics(BaseModel):
     """
-    Complete performance statistics matching the Numatix Statistics tab (Image 2).
+    Complete performance statistics.
     All monetary values in USDT. All ratios are dimensionless unless noted.
     """
 
