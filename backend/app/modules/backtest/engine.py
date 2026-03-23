@@ -2,17 +2,16 @@
 app/modules/backtest/engine.py
 ────────────────────────────────
 Backtesting Engine Orchestrator — HLD §4.2, Module 2
-Binance / Cryptocurrency only (SRS §1.2)
 
 Pipeline:
   1. Fetch historical K-lines (LRU cached, Binance REST).
-  2. Build Pandas DataFrame with candle source-price column.
-  3. Instantiate strategy from registry; validate config.
-  4. Off-load vectorised signal generation to ThreadPoolExecutor.
-  5. Off-load trade simulation to ThreadPoolExecutor.
-  6. Synthesize performance metrics.
-  7. Return BacktestRunResponse.
-  8. Persist to DB (stub — replace with PostgreSQL insert for Module 4).
+  2. Build Pandas DataFrame.
+  3. Instantiate + validate strategy.
+  4. Vectorised signal generation → thread pool.
+  5. Trade simulation → thread pool.
+  6. Performance synthesis (all Image 2 statistics).
+  7. Generate interactive Plotly HTML chart.
+  8. Return BacktestRunResponse.
 """
 
 from __future__ import annotations
@@ -26,6 +25,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from app.core.config import settings
+from app.modules.backtest.chart_generator import generate_chart
 from app.modules.backtest.data_cache import get_historical_data
 from app.modules.backtest.performance import simulate_trades, synthesize
 from app.modules.backtest.strategies import get_strategy
@@ -47,22 +47,19 @@ _thread_pool = ThreadPoolExecutor(
 
 
 class BacktestError(RuntimeError):
-    """Raised when a backtest cannot be completed."""
+    pass
 
 
 async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
-    """Primary entry point — called by the API route handler."""
-
     backtest_id = str(uuid.uuid4())
     created_at  = datetime.now(tz=timezone.utc)
-
     logger.info(
-        "Backtest %s | strategy=%s symbol=%s interval=%s [%s → %s]",
+        "Backtest %s | %s %s %s [%s → %s]",
         backtest_id, request.strategy.value, request.symbol,
         request.interval.value, request.start_date, request.end_date,
     )
 
-    # ── 1. Fetch historical K-lines (LRU cached) ──────────────────────────────
+    # 1. Fetch K-lines (LRU cached)
     try:
         bars = await get_historical_data(
             market=request.trading_market.value,
@@ -83,10 +80,10 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
             "Check the symbol name and date range."
         )
 
-    # ── 2. Build DataFrame ────────────────────────────────────────────────────
+    # 2. Build DataFrame
     df = _bars_to_dataframe(bars)
 
-    # ── 3. Instantiate and validate strategy ──────────────────────────────────
+    # 3. Strategy
     try:
         strategy = get_strategy(request.strategy.value, request.strategy_config)
     except KeyError as exc:
@@ -96,12 +93,12 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
 
     if len(df) < strategy.min_bars_required:
         raise BacktestError(
-            f"Insufficient data: {request.strategy.value} requires at least "
+            f"Insufficient data: {request.strategy.value} needs ≥ "
             f"{strategy.min_bars_required} bars; got {len(df)}. "
             "Extend the date range or use a shorter interval."
         )
 
-    # ── 4. Vectorised signal generation (thread pool) ────────────────────────
+    # 4. Signal generation (thread pool — CPU-bound)
     loop = asyncio.get_running_loop()
     try:
         df_signals = await loop.run_in_executor(
@@ -110,21 +107,37 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
     except Exception as exc:
         raise BacktestError(f"Signal generation failed: {exc}") from exc
 
-    # ── 5. Trade simulation (thread pool) ────────────────────────────────────
+    # 5. Trade simulation (thread pool)
     try:
-        equity_curve, raw_trades, _ = await loop.run_in_executor(
-            _thread_pool,
-            _run_simulation,
-            df_signals,
-            request,
-        )
+        equity_curve, raw_trades, final_value, commissions_paid = \
+            await loop.run_in_executor(
+                _thread_pool, _run_simulation, df_signals, request
+            )
     except Exception as exc:
         raise BacktestError(f"Trade simulation failed: {exc}") from exc
 
-    # ── 6. Performance synthesis ──────────────────────────────────────────────
-    statistics, trade_records = synthesize(equity_curve, raw_trades, request.initial_cash)
+    # 6. Performance synthesis
+    statistics, trade_records = synthesize(
+        equity_curve=equity_curve,
+        raw_trades=raw_trades,
+        initial_cash=request.initial_cash,
+        df=df_signals,
+        commissions_paid=commissions_paid,
+    )
 
-    # ── 7. Assemble response ──────────────────────────────────────────────────
+    # 7. Generate interactive Plotly chart
+    try:
+        chart_html = await loop.run_in_executor(
+            _thread_pool,
+            _generate_chart_sync,
+            df_signals, equity_curve, raw_trades,
+            request.strategy.value, request.symbol, request.initial_cash,
+        )
+    except Exception as exc:
+        logger.warning("Chart generation failed (non-fatal): %s", exc)
+        chart_html = "<p>Chart unavailable</p>"
+
+    # 8. Assemble response
     duration_days = (request.end_date - request.start_date).days
 
     parameters = BacktestParameters(
@@ -160,18 +173,20 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
         statistics=statistics,
         parameters=parameters,
         trade_log=trade_records,
+        chart_html=chart_html,
     )
 
     logger.info(
-        "Backtest %s completed | trades=%d return=%.2f%%",
-        backtest_id, statistics.total_trades, statistics.total_return_pct,
+        "Backtest %s done | trades=%d return=%.2f%% sharpe=%.2f",
+        backtest_id, statistics.total_trades,
+        statistics.total_return_pct, statistics.sharpe_ratio,
     )
 
     await _persist_result_stub(backtest_id, request, response)
     return response
 
 
-# ─── Synchronous helpers (run inside thread pool) ─────────────────────────────
+# ─── Sync helpers (run in thread pool) ───────────────────────────────────────
 
 def _run_simulation(df: pd.DataFrame, req: BacktestRunRequest) -> tuple:
     return simulate_trades(
@@ -183,6 +198,17 @@ def _run_simulation(df: pd.DataFrame, req: BacktestRunRequest) -> tuple:
         order_size_pct=req.order_size_pct,
         order_size_usdt=req.order_size_usdt,
         intraday=req.intraday,
+    )
+
+
+def _generate_chart_sync(df, equity_curve, raw_trades, strategy_id, symbol, initial_cash):
+    return generate_chart(
+        df=df,
+        equity_curve=equity_curve,
+        raw_trades=raw_trades,
+        strategy_id=strategy_id,
+        symbol=symbol,
+        initial_cash=initial_cash,
     )
 
 
@@ -200,11 +226,6 @@ def _bars_to_dataframe(bars: list[OHLCV]) -> pd.DataFrame:
     return df.dropna(subset=["open", "high", "low", "close"])
 
 
-# ─── DB persistence stub ─────────────────────────────────────────────────────
-
 async def _persist_result_stub(backtest_id, request, response) -> None:
-    """
-    Replace with asyncpg / SQLAlchemy insert once Module 4 DB layer is ready.
-    The Backtest Results listing page depends on persisted data.
-    """
-    logger.debug("DB persist stub — backtest_id=%s (no-op)", backtest_id)
+    """Replace with asyncpg insert when Module 4 DB layer is ready."""
+    logger.debug("DB persist stub — %s (no-op)", backtest_id)
