@@ -1,135 +1,224 @@
 import { useNavigate } from 'react-router-dom'
 import { useBacktests } from '../api/backtests'
 import { useState } from 'react'
-import { CheckCircle2, Clock, AlertTriangle, Eye, Trash2, Activity } from 'lucide-react'
+import { CheckCircle2, Clock, AlertTriangle, Eye, Trash2, Activity, TrendingUp, TrendingDown } from 'lucide-react'
 
-// Basic relative time formatter
 function timeAgo(dateString) {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffInSeconds = Math.floor((now - date) / 1000)
+  const diff = Math.floor((Date.now() - new Date(dateString)) / 1000)
+  if (diff < 60)    return 'Just now'
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  if (diff < 172800) return 'Yesterday'
+  return `${Math.floor(diff / 86400)}d ago`
+}
 
-  if (diffInSeconds < 60) return `Just now`
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} mins ago`
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
-  if (diffInSeconds < 172800) return `Yesterday`
-  return `${Math.floor(diffInSeconds / 86400)} days ago`
+function ReturnBar({ pct }) {
+  if (pct === null || pct === undefined) return null
+  const clamped = Math.min(Math.abs(pct), 100)
+  const isPos   = pct >= 0
+  return (
+    <div style={{ marginTop: '8px', height: '3px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+      <div style={{
+        height: '100%',
+        width: `${clamped}%`,
+        borderRadius: '2px',
+        background: isPos
+          ? 'linear-gradient(90deg, rgba(16,185,129,0.4), #10b981)'
+          : 'linear-gradient(90deg, rgba(244,63,94,0.4), #f43f5e)',
+        transition: 'width 0.6s ease',
+      }} />
+    </div>
+  )
 }
 
 export default function BacktestList({ searchQuery }) {
   const navigate = useNavigate()
-  const [page, setPage] = useState(0)
-  const limit = 20
+  const [page, setPage]  = useState(0)
+  const limit  = 20
   const offset = page * limit
 
   const { data: backtests, isLoading, isError, error } = useBacktests(limit, offset)
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-2xl">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[var(--color-text-muted)]">Loading simulation runs…</p>
-        </div>
-      </div>
-    )
-  }
+  if (isLoading) return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: '12px', background: 'linear-gradient(145deg,#131b2f,#0f1729)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px' }}>
+      <div style={{ width: '28px', height: '28px', border: '2px solid rgba(129,140,248,0.2)', borderTopColor: '#818cf8', borderRadius: '50%', animation: 'spin-cw 0.8s linear infinite' }} />
+      <p style={{ fontSize: '13px', color: '#475569' }}>Loading simulations…</p>
+    </div>
+  )
 
-  if (isError) {
-    return (
-      <div className="text-center py-20 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-2xl">
-        <p className="text-[var(--color-danger)] text-sm">Failed to load backtests.</p>
-        <p className="text-xs text-[var(--color-text-muted)] mt-1">{error?.message}</p>
-      </div>
-    )
-  }
+  if (isError) return (
+    <div style={{ textAlign: 'center', padding: '64px 0', background: 'linear-gradient(145deg,#131b2f,#0f1729)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px' }}>
+      <p style={{ color: '#f43f5e', fontSize: '14px', fontWeight: 600 }}>Failed to load backtests.</p>
+      <p style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>{error?.message}</p>
+    </div>
+  )
 
-  if (!backtests || backtests.length === 0) {
-    return (
-      <div className="text-center py-20 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-2xl">
-        <svg className="w-12 h-12 mx-auto text-[var(--color-surface-overlay)] mb-3" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-        </svg>
-        <p className="text-[var(--color-text-muted)] text-sm">No simulations found.</p>
-        <p className="text-xs text-[var(--color-text-muted)] mt-1">Run your first simulation to see results here.</p>
-      </div>
-    )
-  }
+  if (!backtests || backtests.length === 0) return (
+    <div style={{ textAlign: 'center', padding: '64px 0', background: 'linear-gradient(145deg,#131b2f,#0f1729)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px' }}>
+      <Activity size={32} style={{ color: '#334155', margin: '0 auto 12px' }} />
+      <p style={{ color: '#64748b', fontSize: '14px', fontWeight: 500 }}>No simulations yet.</p>
+      <p style={{ fontSize: '12px', color: '#334155', marginTop: '4px' }}>Run your first simulation to see results here.</p>
+    </div>
+  )
 
-  const filteredBacktests = backtests.filter(bt => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    const nameStr = (bt.name || `${bt.strategy_id} Run`).toLowerCase();
-    return (bt.symbol && bt.symbol.toLowerCase().includes(q)) ||
-           (bt.strategy_id && bt.strategy_id.toLowerCase().includes(q)) ||
-           (nameStr.includes(q))
-  });
+  const filtered = backtests.filter(bt => {
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    const name = (bt.name || `${bt.strategy_id} Run`).toLowerCase()
+    return (bt.symbol?.toLowerCase().includes(q)) ||
+           (bt.strategy_id?.toLowerCase().includes(q)) ||
+           name.includes(q)
+  })
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredBacktests.map((bt) => {
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '18px' }}>
+        {filtered.map((bt) => {
           const returnPct = bt.total_return_pct
-          const isPositive = returnPct !== null && returnPct > 0
-          const isNegative = returnPct !== null && returnPct < 0
-          
-          let statusConfig = { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' }
-          const status = bt.status || 'COMPLETED'
-          if (status === 'RUNNING') statusConfig = { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' }
-          if (status === 'ERROR') statusConfig = { icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' }
+          const isPos     = returnPct !== null && returnPct > 0
+          const isNeg     = returnPct !== null && returnPct < 0
+          const status    = bt.status || 'COMPLETED'
+
+          const statusMap = {
+            COMPLETED: { icon: CheckCircle2, color: '#10b981', bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.2)'  },
+            RUNNING:   { icon: Clock,        color: '#818cf8', bg: 'rgba(129,140,248,0.1)', border: 'rgba(129,140,248,0.2)' },
+            ERROR:     { icon: AlertTriangle,color: '#f43f5e', bg: 'rgba(244,63,94,0.1)',   border: 'rgba(244,63,94,0.2)'   },
+          }
+          const s = statusMap[status] || statusMap.COMPLETED
+          const StatusIcon = s.icon
+
+          // Return size: visually scale large returns
+          const returnFontSize = returnPct !== null
+            ? (Math.abs(returnPct) >= 30 ? '30px' : Math.abs(returnPct) >= 10 ? '26px' : '22px')
+            : '22px'
+
+          const displayName = bt.name || `Run — ${new Date(bt.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+          const stratLabel  = bt.strategy_id?.replace(/_/g, ' ') || 'Unknown'
 
           return (
             <div
               key={bt.id}
-              className="bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-2xl p-6 hover:border-[var(--color-primary)]/50 transition-colors shadow-lg shadow-black/10"
+              style={{
+                background: 'linear-gradient(145deg, #131b2f 0%, #0f1729 100%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '18px',
+                padding: '22px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                cursor: 'default',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(129,140,248,0.18)'
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)'
+              }}
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}`}>
-                     <statusConfig.icon size={20} />
+              {/* Card top: icon + name + status */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                <div style={{
+                  width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
+                  background: s.bg, border: `1px solid ${s.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <StatusIcon size={20} strokeWidth={1.8} style={{ color: s.color }} />
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'white', lineHeight: 1.3, wordBreak: 'break-word' }}>
+                    {displayName}
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                    <Clock size={11} style={{ color: '#475569', flexShrink: 0 }} />
+                    <span style={{ fontSize: '11px', color: '#475569' }}>{timeAgo(bt.created_at)}</span>
                   </div>
-                  <div className="overflow-hidden">
-                    <h3 className="text-[var(--color-text)] font-semibold truncate max-w-[150px]">{bt.name || `${bt.strategy_id} Run`}</h3>
-                    <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1 mt-0.5 whitespace-nowrap">
-                      <Clock size={12} />
-                      {timeAgo(bt.created_at)}
+                </div>
+
+                <span style={{
+                  padding: '3px 8px', borderRadius: '6px', flexShrink: 0,
+                  fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  background: s.bg, color: s.color, border: `1px solid ${s.border}`,
+                }}>
+                  {status}
+                </span>
+              </div>
+
+              {/* Strategy + Market */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px',
+                padding: '14px', borderRadius: '12px',
+                background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.04)',
+              }}>
+                <div>
+                  <p style={{ fontSize: '10px', fontWeight: 700, color: '#334155', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>Strategy</p>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={stratLabel}>
+                    {stratLabel}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '10px', fontWeight: 700, color: '#334155', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>Market</p>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'white' }}>{bt.symbol}</p>
+                </div>
+              </div>
+
+              {/* Return + actions */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '10px', fontWeight: 700, color: '#334155', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Total Return
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {returnPct !== null
+                      ? (isPos ? <TrendingUp size={16} style={{ color: '#10b981' }} /> : <TrendingDown size={16} style={{ color: '#f43f5e' }} />)
+                      : null
+                    }
+                    <p style={{
+                      fontSize: returnFontSize,
+                      fontWeight: 800,
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1,
+                      color: isPos ? '#10b981' : isNeg ? '#f43f5e' : '#94a3b8',
+                    }}>
+                      {returnPct !== null ? `${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(2)}%` : '—'}
                     </p>
                   </div>
+                  <ReturnBar pct={returnPct} />
                 </div>
-                <div className={`px-2.5 py-1.5 rounded-md bg-[var(--color-surface-overlay)] text-[10px] font-bold tracking-widest uppercase ${statusConfig.color}`}>
-                  {status}
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <p className="text-[10px] text-[var(--color-text-muted)] mb-1 uppercase tracking-wider font-semibold">Strategy</p>
-                  <p className="text-sm font-medium text-[var(--color-text)] flex items-center gap-1.5">
-                    <Activity size={14} className="text-[var(--color-primary)]" />
-                    <span className="truncate">{bt.strategy_id.replace('_', ' ')}</span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-[var(--color-text-muted)] mb-1 uppercase tracking-wider font-semibold">Market</p>
-                  <p className="text-sm font-medium text-[var(--color-text)]">
-                    {bt.symbol}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-5 mt-2 border-t border-[var(--color-border)]/50">
-                <div>
-                  <p className="text-[10px] text-[var(--color-text-muted)] mb-1 uppercase tracking-wider font-semibold">Total Return</p>
-                  <p className={`text-xl font-bold ${isPositive ? 'text-emerald-500' : isNegative ? 'text-red-500' : 'text-[var(--color-text)]'}`}>
-                    {returnPct !== null ? `${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(2)}%` : '—'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => navigate(`/backtests/${bt.id}`)} className="p-2 text-[var(--color-text-muted)] hover:text-white rounded-lg hover:bg-[var(--color-surface-overlay)] transition-colors">
-                    <Eye size={18} />
+                <div style={{ display: 'flex', gap: '6px', marginLeft: '12px' }}>
+                  <button
+                    onClick={() => navigate(`/backtests/${bt.id}`)}
+                    title="View details"
+                    style={{
+                      width: '34px', height: '34px', borderRadius: '10px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      background: 'rgba(255,255,255,0.03)', color: '#64748b',
+                      cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+                  >
+                    <Eye size={15} strokeWidth={2} />
                   </button>
-                  <button className="p-2 text-[var(--color-text-muted)] hover:text-red-500 rounded-lg hover:bg-[var(--color-surface-overlay)] transition-colors">
-                    <Trash2 size={18} />
+                  <button
+                    title="Delete"
+                    style={{
+                      width: '34px', height: '34px', borderRadius: '10px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      background: 'rgba(255,255,255,0.03)', color: '#64748b',
+                      cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#f43f5e'; e.currentTarget.style.background = 'rgba(244,63,94,0.08)'; e.currentTarget.style.borderColor = 'rgba(244,63,94,0.2)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+                  >
+                    <Trash2 size={15} strokeWidth={2} />
                   </button>
                 </div>
               </div>
@@ -139,26 +228,35 @@ export default function BacktestList({ searchQuery }) {
       </div>
 
       {/* Pagination */}
-      {filteredBacktests.length > 0 && (
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-[var(--color-border)]">
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Showing {offset + 1}–{offset + filteredBacktests.length}
+      {filtered.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '28px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <p style={{ fontSize: '13px', color: '#475569', fontWeight: 500 }}>
+            Showing {offset + 1}–{offset + filtered.length}
           </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage(Math.max(0, page - 1))}
-              disabled={page === 0}
-              className="px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] bg-[var(--color-surface-overlay)]/50 rounded-lg hover:bg-[var(--color-surface-overlay)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setPage(page + 1)}
-              disabled={backtests?.length < limit}
-              className="px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] bg-[var(--color-surface-overlay)]/50 rounded-lg hover:bg-[var(--color-surface-overlay)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            >
-              Next
-            </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {['Previous', 'Next'].map((label) => {
+              const disabled = label === 'Previous' ? page === 0 : backtests?.length < limit
+              return (
+                <button
+                  key={label}
+                  onClick={() => setPage(label === 'Previous' ? Math.max(0, page - 1) : page + 1)}
+                  disabled={disabled}
+                  style={{
+                    padding: '8px 18px', borderRadius: '10px',
+                    fontSize: '13px', fontWeight: 600,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: disabled ? '#334155' : '#94a3b8',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s', opacity: disabled ? 0.4 : 1,
+                  }}
+                  onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' } }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = disabled ? '#334155' : '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}

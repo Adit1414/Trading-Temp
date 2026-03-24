@@ -1,202 +1,249 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useBacktestDetail } from '../api/backtests'
 import { useState } from 'react'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Download, BarChart2, Settings2, Activity } from 'lucide-react'
 
 export default function BacktestDetailPage() {
-  const { id } = useParams()
-  const navigate = useNavigate()
+  const { id }       = useParams()
+  const navigate     = useNavigate()
   const { data, isLoading, isError, error } = useBacktestDetail(id)
   const [activeTab, setActiveTab] = useState('Overview')
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[var(--color-text-muted)]">Loading backtest details…</p>
-        </div>
-      </div>
-    )
-  }
+  if (isLoading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ width: '32px', height: '32px', border: '2px solid rgba(129,140,248,0.2)', borderTopColor: '#818cf8', borderRadius: '50%', animation: 'spin-cw 0.8s linear infinite' }} />
+      <p style={{ fontSize: '13px', color: '#475569' }}>Loading backtest details…</p>
+    </div>
+  )
 
-  if (isError) {
-    return (
-      <div className="p-8 text-center bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-2xl max-w-2xl mx-auto mt-10">
-        <p className="text-[var(--color-danger)] font-medium">Failed to load backtest.</p>
-        <p className="text-xs text-[var(--color-text-muted)] mt-1">{error?.message}</p>
-        <button onClick={() => navigate('/backtests')} className="mt-6 px-4 py-2 bg-[var(--color-surface-overlay)] text-white rounded-lg hover:bg-opacity-80 transition-all text-sm font-medium">
-          ← Back to Backtests
-        </button>
-      </div>
-    )
-  }
+  if (isError) return (
+    <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(19,27,47,0.8)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', maxWidth: '500px', margin: '40px auto' }}>
+      <p style={{ color: '#f43f5e', fontWeight: 600, marginBottom: '8px' }}>Failed to load backtest.</p>
+      <p style={{ fontSize: '12px', color: '#475569', marginBottom: '20px' }}>{error?.message}</p>
+      <button
+        onClick={() => navigate('/backtests')}
+        style={{ padding: '9px 18px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '13px', cursor: 'pointer' }}
+      >
+        ← Back to Backtests
+      </button>
+    </div>
+  )
 
   if (!data) return null
 
-  const metrics = data.metrics || {}
+  const metrics    = data.metrics    || {}
   const parameters = data.parameters || {}
-  
-  const status = data.status || 'COMPLETED'
+  const status     = data.status     || 'COMPLETED'
   const isCompleted = status === 'COMPLETED'
 
+  // Human-friendly title: prefer explicit name, else use date
+  const runDate     = new Date(data.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const displayName = data.name && !data.name.match(/^[0-9a-f-]{36}/i)
+    ? data.name
+    : `Backtest Run — ${runDate}`
+  const shortId     = data.strategy_id?.slice(-8).toUpperCase()
+
   const handleExport = () => {
-    const htmlContent = data.chart_html || metrics.chart_html;
-    if (!htmlContent) return;
-    
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `backtest_${data.strategy_id}_${data.symbol}_${new Date().toISOString().split('T')[0]}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+    const html = data.chart_html || metrics.chart_html
+    if (!html) return
+    const blob = new Blob([html], { type: 'text/html' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = `backtest_${data.symbol}_${runDate}.html`
+    document.body.appendChild(a); a.click()
+    document.body.removeChild(a); URL.revokeObjectURL(url)
+  }
+
+  const statusStyle = {
+    COMPLETED: { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.25)'  },
+    RUNNING:   { bg: 'rgba(129,140,248,0.1)', color: '#818cf8', border: 'rgba(129,140,248,0.25)' },
+    ERROR:     { bg: 'rgba(244,63,94,0.1)',   color: '#f43f5e', border: 'rgba(244,63,94,0.25)'   },
+  }[status] || statusStyle?.COMPLETED
+
+  const tabs = [
+    { id: 'Overview',   icon: BarChart2  },
+    { id: 'Parameters', icon: Settings2  },
+    { id: 'Statistics', icon: Activity   },
+  ]
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
-      {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-2">
-        <div className="flex items-start gap-4">
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 28px' }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+          {/* Back button */}
           <button
             onClick={() => navigate('/backtests')}
-            className="p-2.5 rounded-xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-white transition-colors h-[42px] mt-1"
+            style={{
+              width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+              color: '#64748b', cursor: 'pointer', transition: 'all 0.2s', marginTop: '2px',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} strokeWidth={2} />
           </button>
-          
+
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text)] tracking-tight">
-                {data.name || `${data.strategy_id} Run`}
+            {/* Name + status badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'white', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                {displayName}
               </h1>
-              <div className={`px-2.5 py-1 text-[10px] font-bold tracking-wide uppercase rounded ${
-                  isCompleted ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 
-                  status === 'RUNNING' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 
-                  'bg-red-500/10 text-red-500 border border-red-500/20'
-                }`}>
+              <span style={{
+                padding: '3px 10px', borderRadius: '6px',
+                fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase',
+                background: statusStyle?.bg, color: statusStyle?.color,
+                border: `1px solid ${statusStyle?.border}`,
+              }}>
                 {status}
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] mt-2">
-              <span className="bg-[var(--color-surface-raised)] border border-[var(--color-border)] px-2.5 py-1 rounded text-xs font-medium">
-                {data.strategy_id.replace('_', ' ')}
               </span>
-              <span className="text-[var(--color-surface-overlay)]">•</span>
-              <span className="font-medium text-[var(--color-text)]">{data.symbol}</span>
+            </div>
+
+            {/* Sub-info row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{
+                padding: '3px 10px', borderRadius: '6px',
+                fontSize: '11px', fontWeight: 600, color: '#94a3b8',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+              }}>
+                {data.strategy_id?.replace(/_/g, ' ')}
+              </span>
+              <span style={{ color: '#334155', fontSize: '12px' }}>•</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'white' }}>{data.symbol}</span>
+              <span style={{ color: '#334155', fontSize: '12px' }}>•</span>
+              <span style={{ fontSize: '11px', color: '#475569', fontFamily: 'monospace' }}>#{shortId}</span>
             </div>
           </div>
         </div>
-        
-        <button 
+
+        {/* Export button */}
+        <button
           onClick={handleExport}
           disabled={!data.chart_html && !metrics.chart_html}
-          className={`flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-[var(--color-text-muted)] rounded-xl transition-all text-sm font-medium whitespace-nowrap ${
-            (data.chart_html || metrics.chart_html) 
-              ? 'hover:text-[var(--color-primary-light)] hover:border-[var(--color-primary)]/50 cursor-pointer' 
-              : 'opacity-50 cursor-not-allowed'
-          }`}>
-          <ExternalLink size={16} />
+          style={{
+            display: 'flex', alignItems: 'center', gap: '7px',
+            padding: '9px 16px', borderRadius: '12px',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            color: '#94a3b8', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+            transition: 'all 0.2s', whiteSpace: 'nowrap',
+            opacity: (!data.chart_html && !metrics.chart_html) ? 0.4 : 1,
+          }}
+          onMouseEnter={(e) => { if (data.chart_html || metrics.chart_html) { e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' } }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+        >
+          <Download size={15} strokeWidth={2} />
           Export Report
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 mb-6 border-b border-[var(--color-border)]/50 pb-4 overflow-x-auto">
-        {['Overview', 'Parameters', 'Statistics'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium rounded-full transition-all whitespace-nowrap ${
-              activeTab === tab 
-                ? 'bg-[var(--color-surface-overlay)] text-white shadow-sm' 
-                : 'text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-surface-overlay)]/30'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      {/* ── Tabs ── */}
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', padding: '4px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '14px', width: 'fit-content' }}>
+        {tabs.map(({ id: tabId, icon: TabIcon }) => {
+          const active = activeTab === tabId
+          return (
+            <button
+              key={tabId}
+              onClick={() => setActiveTab(tabId)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '7px',
+                padding: '8px 16px', borderRadius: '10px',
+                fontSize: '13px', fontWeight: active ? 600 : 500,
+                border: active ? '1px solid rgba(129,140,248,0.2)' : '1px solid transparent',
+                background: active ? 'rgba(129,140,248,0.1)' : 'transparent',
+                color: active ? 'white' : '#64748b',
+                cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = '#94a3b8' }}
+              onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = '#64748b' }}
+            >
+              <TabIcon size={14} strokeWidth={2} />
+              {tabId}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Tab Content */}
-      <div className="pt-2">
-        {activeTab === 'Overview' && (
-          <div className="space-y-6">
-            {/* Chart */}
-            {(data.chart_html || metrics.chart_html) ? (
-              <div className="bg-[var(--color-surface-raised)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-lg shadow-black/10">
-                <div className="px-6 py-5 border-b border-[var(--color-border)]">
-                  <h3 className="text-xl font-bold text-[var(--color-text)] tracking-tight">Portfolio Performance</h3>
-                  <p className="text-sm text-[var(--color-text-muted)] mt-1">Interactive simulation equity curve</p>
-                </div>
-                <div className="p-2">
-                  <iframe
-                    srcDoc={data.chart_html || metrics.chart_html}
-                    sandbox="allow-scripts allow-popups"
-                    className="w-full h-[600px] rounded-xl border-0"
-                    title="Backtest Chart"
-                  />
-                </div>
+      {/* ── Tab Content ── */}
+      {activeTab === 'Overview' && (
+        <div>
+          {(data.chart_html || metrics.chart_html) ? (
+            <div style={{ background: 'linear-gradient(145deg,#131b2f,#0f1729)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}>
+              <div style={{ padding: '22px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'white' }}>Portfolio Performance</h3>
+                <p style={{ fontSize: '12px', color: '#475569', marginTop: '3px' }}>Interactive simulation equity curve</p>
               </div>
+              <div style={{ padding: '8px' }}>
+                <iframe
+                  srcDoc={data.chart_html || metrics.chart_html}
+                  sandbox="allow-scripts allow-popups"
+                  style={{ width: '100%', height: '600px', borderRadius: '14px', border: 'none', display: 'block' }}
+                  title="Backtest Chart"
+                />
+              </div>
+            </div>
+          ) : (
+            <div style={{ background: 'linear-gradient(145deg,#131b2f,#0f1729)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '80px', textAlign: 'center' }}>
+              <p style={{ color: '#475569' }}>No chart data available for this run.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'Parameters' && (
+        <div style={{ background: 'linear-gradient(145deg,#131b2f,#0f1729)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.25)' }}>
+          <div style={{ padding: '22px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'white' }}>Simulation Parameters</h3>
+          </div>
+          <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+            {Object.keys(parameters).length > 0 ? (
+              Object.entries(parameters).map(([key, val]) => (
+                <div key={key} style={{ background: 'rgba(0,0,0,0.2)', padding: '14px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <p style={{ fontSize: '10px', color: '#334155', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>
+                    {key.replace(/_/g, ' ')}
+                  </p>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'white' }}>
+                    {typeof val === 'object' ? JSON.stringify(val) : String(val ?? '—')}
+                  </p>
+                </div>
+              ))
             ) : (
-              <div className="bg-[var(--color-surface-raised)] rounded-2xl border border-[var(--color-border)] p-12 text-center shadow-lg">
-                <p className="text-[var(--color-text-muted)]">No chart data available for this run.</p>
-              </div>
+              <p style={{ fontSize: '13px', color: '#475569', gridColumn: '1 / -1' }}>No parameters recorded.</p>
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        {activeTab === 'Parameters' && (
-          <div className="bg-[var(--color-surface-raised)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-lg shadow-black/10">
-            <div className="px-6 py-5 border-b border-[var(--color-border)]">
-              <h3 className="text-xl font-bold text-[var(--color-text)] tracking-tight">Simulation Parameters</h3>
-            </div>
-            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {Object.keys(parameters).length > 0 ? (
-                Object.entries(parameters).map(([key, val]) => (
-                  <div key={key} className="bg-[var(--color-surface)] p-4 rounded-xl border border-[var(--color-border)]">
-                    <p className="text-[10px] text-[var(--color-text-muted)] mb-1.5 uppercase tracking-wider font-semibold">{key.replace(/_/g, ' ')}</p>
-                    <p className="text-sm font-medium text-[var(--color-text)]">
-                      {typeof val === 'object' ? JSON.stringify(val) : String(val ?? '—')}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-[var(--color-text-muted)] col-span-full">No parameters recorded.</p>
-              )}
-            </div>
+      {activeTab === 'Statistics' && (
+        <div style={{ background: 'linear-gradient(145deg,#131b2f,#0f1729)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.25)' }}>
+          <div style={{ padding: '22px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'white' }}>Performance Statistics</h3>
           </div>
-        )}
-
-        {activeTab === 'Statistics' && (
-          <div className="bg-[var(--color-surface-raised)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-lg shadow-black/10">
-            <div className="px-6 py-5 border-b border-[var(--color-border)]">
-              <h3 className="text-xl font-bold text-[var(--color-text)] tracking-tight">Performance Statistics</h3>
-            </div>
-            <div className="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {Object.keys(metrics).length > 0 ? (
-                Object.entries(metrics).map(([key, val]) => (
-                  <div key={key} className="bg-[var(--color-surface)] p-4 rounded-xl border border-[var(--color-border)]">
-                    <p className="text-[10px] text-[var(--color-text-muted)] mb-1.5 uppercase tracking-wider font-semibold">{key.replace(/_/g, ' ')}</p>
-                    <p className={`text-sm font-medium ${
-                      key.includes('return_pct') || key.includes('win_rate') || key.includes('profit_factor') ? 
-                        (val > 0 ? 'text-emerald-500' : val < 0 ? 'text-red-500' : 'text-[var(--color-text)]') 
-                        : 'text-[var(--color-text)]'
-                    }`}>
+          <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+            {Object.keys(metrics).length > 0 ? (
+              Object.entries(metrics).map(([key, val]) => {
+                const isGood = (key.includes('return_pct') || key.includes('win_rate') || key.includes('profit_factor')) && val > 0
+                const isBad  = (key.includes('return_pct') || key.includes('win_rate') || key.includes('profit_factor')) && val < 0
+                return (
+                  <div key={key} style={{ background: 'rgba(0,0,0,0.2)', padding: '14px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <p style={{ fontSize: '10px', color: '#334155', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>
+                      {key.replace(/_/g, ' ')}
+                    </p>
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: isGood ? '#10b981' : isBad ? '#f43f5e' : 'white' }}>
                       {val !== null && val !== undefined ? String(val) : '—'}
                     </p>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-[var(--color-text-muted)] col-span-full">No statistics recorded.</p>
-              )}
-            </div>
+                )
+              })
+            ) : (
+              <p style={{ fontSize: '13px', color: '#475569', gridColumn: '1 / -1' }}>No statistics recorded.</p>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
