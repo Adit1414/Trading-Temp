@@ -17,55 +17,74 @@ const data = [
 
 export default function PortfolioPerformanceCard() {
   return (
-    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-2xl p-6 lg:p-8 shadow-lg shadow-black/10 flex flex-col">
-      <div className="mb-8">
-        <h3 className="text-xl font-bold text-[var(--color-text)] tracking-tight">Portfolio Performance (24h)</h3>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1.5">Real-time portfolio value tracking</p>
+    <div className="bg-[#111827] border border-white/5 rounded-xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+
+      {/* Header */}
+      <div className="mb-5">
+        <h3 className="text-[18px] font-semibold text-white">
+          Portfolio Performance
+        </h3>
+        <p className="text-[13px] text-[#9CA3AF] mt-1">
+          Last 24 hours
+        </p>
       </div>
-      <div className="h-[320px] w-full min-h-[320px]">
+
+      {/* Chart */}
+      <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+
             <defs>
               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#A78BFA" stopOpacity={0.3} />
+                <stop offset="5%" stopColor="#A78BFA" stopOpacity={0.15} />
                 <stop offset="95%" stopColor="#A78BFA" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1F2937" opacity={0.6} />
-            <XAxis 
-              dataKey="time" 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fill: '#94A3B8', fontSize: 12 }} 
+
+            <CartesianGrid
+              stroke="rgba(255,255,255,0.08)"
+              vertical={false}
+            />
+
+            <XAxis
+              dataKey="time"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#9CA3AF', fontSize: 12 }}
               dy={10}
             />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fill: '#94A3B8', fontSize: 12 }} 
+
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#9CA3AF', fontSize: 12 }}
               domain={['dataMin - 1000', 'dataMax + 1000']}
               tickFormatter={(value) => `$${(value / 1000).toFixed(1)}k`}
               dx={-10}
             />
+
             <Tooltip
-              contentStyle={{ 
-                backgroundColor: '#131620', 
-                border: '1px solid #1F2937', 
-                borderRadius: '12px',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+              cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
+              contentStyle={{
+                backgroundColor: '#111827',
+                border: '1px solid rgba(255,255,255,0.05)',
+                borderRadius: '10px',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.35)'
               }}
-              itemStyle={{ color: '#F8FAFC', fontWeight: 'bold' }}
-              labelStyle={{ color: '#94A3B8', marginBottom: '4px' }}
-              formatter={(value) => [`$${value.toLocaleString()}`, 'Portfolio Value']}
+              labelStyle={{ color: '#9CA3AF', fontSize: '12px' }}
+              itemStyle={{ color: '#FFFFFF', fontWeight: 600 }}
+              formatter={(value) => [`$${value.toLocaleString()}`, 'Value']}
             />
-            <Area 
-              type="monotone" 
-              dataKey="value" 
-              stroke="#A78BFA" 
-              strokeWidth={3}
-              fillOpacity={1} 
-              fill="url(#colorValue)" 
+
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="#A78BFA"
+              strokeWidth={2.5}
+              fill="url(#colorValue)"
+              activeDot={{ r: 4, fill: '#A78BFA' }}
             />
+
           </AreaChart>
         </ResponsiveContainer>
       </div>
