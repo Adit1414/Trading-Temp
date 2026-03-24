@@ -19,6 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    print("MIGRATION: Creating users table")
     # ── USERS ─────────────────────────────────────────────────────────────────
     op.create_table(
         "users",
@@ -29,6 +30,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_users_email", "users", ["email"])
 
+    print("MIGRATION: Creating api_credentials table")
     # ── API_CREDENTIALS ───────────────────────────────────────────────────────
     # environment CHECK: MAINNET or TESTNET
     op.create_table(
@@ -48,6 +50,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_api_credentials_user_id", "api_credentials", ["user_id"])
 
+    print("MIGRATION: Creating strategies table")
     # ── STRATEGIES ────────────────────────────────────────────────────────────
     op.create_table(
         "strategies",
@@ -59,6 +62,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_strategies_type_code", "strategies", ["type_code"])
 
+    print("MIGRATION: Creating bots table")
     # ── BOTS ──────────────────────────────────────────────────────────────────
     # status CHECK: RUNNING | STOPPED | PAUSED_LIMIT_REACHED
     # environment CHECK: MAINNET | TESTNET
@@ -94,6 +98,7 @@ def upgrade() -> None:
     op.create_index("ix_bots_user_id",     "bots", ["user_id"])
     op.create_index("ix_bots_strategy_id", "bots", ["strategy_id"])
 
+    print("MIGRATION: Creating bot_state table")
     # ── BOT_STATE ─────────────────────────────────────────────────────────────
     # bot_id is both PK and FK → enforces strict 1-to-1 with BOTS
     # current_position CHECK: LONG | SHORT | FLAT
@@ -120,6 +125,7 @@ def upgrade() -> None:
         ),
     )
 
+    print("MIGRATION: Creating trade_logs table")
     # ── TRADE_LOGS ────────────────────────────────────────────────────────────
     # bot_id nullable → NULL means manual trade
     # side CHECK: BUY | SELL
@@ -159,6 +165,7 @@ def upgrade() -> None:
     op.create_index("ix_trade_logs_bot_id",     "trade_logs", ["bot_id"])
     op.create_index("ix_trade_logs_executed_at","trade_logs", ["executed_at"])
 
+    print("MIGRATION: Creating backtests table")
     # ── BACKTESTS ─────────────────────────────────────────────────────────────
     # user_id nullable → pre-auth phase; set NULL on user delete (preserve history)
     op.create_table(
@@ -180,6 +187,7 @@ def upgrade() -> None:
     op.create_index("ix_backtests_strategy_id", "backtests", ["strategy_id"])
     op.create_index("ix_backtests_symbol",      "backtests", ["symbol"])
     op.create_index("ix_backtests_created_at",  "backtests", ["created_at"])
+    print("MIGRATION: Finished all tables")
 
 
 def downgrade() -> None:

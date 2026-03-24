@@ -29,7 +29,7 @@ _db_url = (settings.DATABASE_URL or "").replace("+asyncpg", "+psycopg2", 1)
 config.set_main_option("sqlalchemy.url", _db_url)
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

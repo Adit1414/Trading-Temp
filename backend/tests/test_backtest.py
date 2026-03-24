@@ -536,22 +536,28 @@ class TestAPI:
         }
         assert client.post("/api/v1/backtest/run", json=payload).status_code == 422
 
-    def test_db_backtests_list_no_db(self):
+    @patch("app.api.v1.routes.backtest_db.get_db")
+    def test_db_backtests_list_no_db(self, mock_get_db):
         """When DATABASE_URL is not set, listing backtests returns empty list."""
+        mock_get_db.return_value.__aenter__.return_value = None
         r = client.get("/api/v1/backtests")
         assert r.status_code == 200
         assert r.json() == []
 
-    def test_db_backtests_get_nonexistent(self):
+    @patch("app.api.v1.routes.backtest_db.get_db")
+    def test_db_backtests_get_nonexistent(self, mock_get_db):
         """When DATABASE_URL is not set, returns 503."""
+        mock_get_db.return_value.__aenter__.return_value = None
         r = client.get("/api/v1/backtests/nonexistent-id")
         assert r.status_code in (404, 503)
 
-    def test_db_strategies_list_fallback(self):
+    @patch("app.api.v1.routes.strategies_db.get_db")
+    def test_db_strategies_list_fallback(self, mock_get_db):
         """
         When DATABASE_URL is not set, strategies endpoint returns
         the in-memory fallback list.
         """
+        mock_get_db.return_value.__aenter__.return_value = None
         r = client.get("/api/v1/strategies")
         assert r.status_code == 200
         data = r.json()

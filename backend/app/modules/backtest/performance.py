@@ -81,10 +81,11 @@ def simulate_trades(
             entry_fee = alloc * commission
             cost      = alloc + entry_fee  # == budget, guaranteed <= cash
 
-            if cash >= cost:
+            # Floating-point precision fix: cost can be slightly > budget (100000.00000000001)
+            if cash + 1e-8 >= cost:
                 position_usdt = alloc
                 entry_price   = exec_buy
-                cash         -= cost
+                cash          = max(0.0, cash - cost)
                 total_commissions += entry_fee
                 trade_number += 1
                 raw_trades.append({
