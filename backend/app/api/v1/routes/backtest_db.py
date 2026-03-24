@@ -65,7 +65,19 @@ async def get_one_backtest(backtest_id: str) -> BacktestDB:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Backtest '{backtest_id}' not found.",
             )
-        return BacktestDB.model_validate(row)
+            
+        db_obj = BacktestDB.model_validate(row)
+        
+        # Attempt to load chart_html from disk
+        try:
+            from pathlib import Path
+            chart_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "data" / "charts" / f"{backtest_id}.html"
+            if chart_path.exists():
+                db_obj.chart_html = chart_path.read_text(encoding="utf-8")
+        except Exception as e:
+            logger.warning("Failed to load chart HTML for backtest %s: %s", backtest_id, e)
+            
+        return db_obj
 
 
 @router.delete(
@@ -89,3 +101,12 @@ async def delete_one_backtest(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Backtest '{backtest_id}' not found.",
         )
+        
+    # Attempt to delete the chart file if it exists
+    try:
+        from pathlib import Path
+        chart_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "data" / "charts" / f"{backtest_id}.html"
+        if chart_path.exists():
+            chart_path.unlink()
+    except Exception as e:
+        logger.warning("Failed to delete chart HTML for backtest %s: %s", backtest_id, e)

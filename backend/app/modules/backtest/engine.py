@@ -29,6 +29,7 @@ import logging
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -147,6 +148,13 @@ async def run_backtest(request: BacktestRunRequest) -> BacktestRunResponse:
             df_signals, equity_curve, raw_trades,
             request.strategy.value, request.symbol, request.initial_cash,
         )
+        
+        # Save to disk for later retrieval by the /backtests/{id} endpoint
+        charts_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "charts"
+        charts_dir.mkdir(parents=True, exist_ok=True)
+        chart_path = charts_dir / f"{backtest_id}.html"
+        chart_path.write_text(chart_html, encoding="utf-8")
+        
     except Exception as exc:
         logger.warning("Chart generation failed (non-fatal): %s", exc)
         chart_html = "<p>Chart unavailable</p>"

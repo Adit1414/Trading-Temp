@@ -40,6 +40,21 @@ export default function BacktestDetailPage() {
   const status = data.status || 'COMPLETED'
   const isCompleted = status === 'COMPLETED'
 
+  const handleExport = () => {
+    const htmlContent = data.chart_html || metrics.chart_html;
+    if (!htmlContent) return;
+    
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backtest_${data.strategy_id}_${data.symbol}_${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
       {/* Header section */}
@@ -76,7 +91,14 @@ export default function BacktestDetailPage() {
           </div>
         </div>
         
-        <button className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary-light)] hover:border-[var(--color-primary)]/50 rounded-xl transition-all text-sm font-medium whitespace-nowrap">
+        <button 
+          onClick={handleExport}
+          disabled={!data.chart_html && !metrics.chart_html}
+          className={`flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-[var(--color-text-muted)] rounded-xl transition-all text-sm font-medium whitespace-nowrap ${
+            (data.chart_html || metrics.chart_html) 
+              ? 'hover:text-[var(--color-primary-light)] hover:border-[var(--color-primary)]/50 cursor-pointer' 
+              : 'opacity-50 cursor-not-allowed'
+          }`}>
           <ExternalLink size={16} />
           Export Report
         </button>

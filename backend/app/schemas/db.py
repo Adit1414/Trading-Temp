@@ -130,6 +130,7 @@ class BacktestDB(BaseModel):
     parameters:      Dict[str, Any]
     metrics:         Dict[str, Any]
     result_file_url: Optional[str]
+    chart_html:      Optional[str] = None
     created_at:      datetime
 
 
