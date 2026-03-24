@@ -51,6 +51,16 @@ class Settings(BaseSettings):
     # For Supabase: postgresql+asyncpg://postgres:<password>@db.<project>.supabase.co:5432/postgres
     DATABASE_URL: Optional[str] = None
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def _assemble_db_connection(cls, v: Optional[str]) -> Optional[str]:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif v.startswith("postgresql://"):
+                return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
+
     # ── Supabase Storage (for equity-curve files) ─────────────────────────────
     # Bucket name where heavy equity_curve arrays are stored as JSON
     STORAGE_BUCKET: str = "backtest-results"
