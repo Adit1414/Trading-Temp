@@ -257,6 +257,7 @@ async def _persist_result(
 
             row = await create_backtest(
                 session=session,
+                id=backtest_id,
                 user_id=request.user_id,           # None until Module 1 auth
                 strategy_id=strategy_row.id,
                 symbol=request.symbol,

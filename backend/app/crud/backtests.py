@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 async def create_backtest(
     session:         AsyncSession,
     *,
+    id:              Optional[str] = None,
     user_id:         Optional[str],
     strategy_id:     str,
     symbol:          str,
@@ -54,15 +55,19 @@ async def create_backtest(
     Returns:
         The newly created BacktestModel row.
     """
-    row = BacktestModel(
-        user_id=user_id,
-        strategy_id=strategy_id,
-        symbol=symbol.upper(),
-        timeframe=timeframe,
-        parameters=parameters,
-        metrics=metrics,
-        result_file_url=result_file_url,
-    )
+    kwargs = {
+        "user_id": user_id,
+        "strategy_id": strategy_id,
+        "symbol": symbol.upper(),
+        "timeframe": timeframe,
+        "parameters": parameters,
+        "metrics": metrics,
+        "result_file_url": result_file_url,
+    }
+    if id is not None:
+        kwargs["id"] = id
+        
+    row = BacktestModel(**kwargs)
     session.add(row)
     await session.flush()   # populate row.id + row.created_at without committing
     await session.refresh(row)
