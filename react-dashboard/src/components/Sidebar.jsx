@@ -1,14 +1,7 @@
 import React from 'react';
-import { LogOut } from 'lucide-react';
-import { NAV_ITEMS } from '../constants/navigation';
+import { LayoutDashboard, LineChart, Bot, Sparkles, Settings, LogOut } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
-/**
- * Sidebar navigation component.
- * @param {Object} props
- * @param {boolean} props.isOpen - Mobile menu state
- * @param {function} props.toggleSidebar - State toggler
- */
 const Sidebar = ({ isOpen, toggleSidebar }) => {
     const location = useLocation();
     const isActive = (path) => {
@@ -16,7 +9,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         return location.pathname.startsWith(path);
     };
 
-
+    const navItems = [
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+        { icon: LineChart, label: 'Backtest', path: '/backtest' },
+        { icon: Bot, label: 'Trading Bots', path: '/bots' },
+        { icon: Sparkles, label: 'Strategies', path: '/strategies' },
+        { icon: Settings, label: 'Settings', path: '/settings' },
+    ];
 
     return (
         <>
@@ -46,7 +45,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
                     {/* Navigation */}
                     <nav className="flex-1 space-y-2 w-full">
-                        {NAV_ITEMS.map((item, index) => (
+                        {navItems.map((item, index) => (
                             <Link
                                 key={index}
                                 to={item.path}
