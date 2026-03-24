@@ -2,18 +2,18 @@
 
 /* ── Design System ─────────────────────────────────────────────── */
 :root {
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
-  --color-primary-light: #818cf8;
-  --color-surface: #0f172a;
-  --color-surface-raised: #1e293b;
-  --color-surface-overlay: #334155;
-  --color-border: #334155;
-  --color-text: #f1f5f9;
-  --color-text-muted: #94a3b8;
-  --color-success: #22c55e;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
+  --color-primary: #7C3AED;
+  --color-primary-hover: #6D28D9;
+  --color-primary-light: #A78BFA;
+  --color-surface: #0B0E14;
+  --color-surface-raised: #131620;
+  --color-surface-overlay: #1C2130;
+  --color-border: #1F2937;
+  --color-text: #F8FAFC;
+  --color-text-muted: #94A3B8;
+  --color-success: #10B981;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 

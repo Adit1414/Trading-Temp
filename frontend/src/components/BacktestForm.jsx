@@ -248,7 +248,7 @@ export default function BacktestForm({ onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-[var(--color-surface-raised)] rounded-2xl border border-[var(--color-border)] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[var(--color-border)] sticky top-0 bg-[var(--color-surface-raised)] z-10 rounded-t-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-[var(--color-border)]/50 sticky top-0 bg-[var(--color-surface-raised)] z-10 rounded-t-2xl">
           <h2 className="text-lg font-semibold text-[var(--color-text)]">New Backtest</h2>
           <button
             onClick={onClose}
@@ -419,7 +419,7 @@ export default function BacktestForm({ onClose }) {
             <button
               type="submit"
               disabled={runBacktest.isPending}
-              className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/20"
+              className="px-6 py-2.5 text-sm font-semibold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[var(--color-primary)]/20"
             >
               {runBacktest.isPending ? (
                 <span className="flex items-center gap-2">

@@ -17,27 +17,27 @@ export default function DashboardPage() {
         
         <div className="flex items-center gap-4">
           <div className="relative">
-            <svg className="w-4 h-4 text-[var(--color-text-muted)] absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 text-[var(--color-text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input 
               type="text" 
               placeholder="Search assets..." 
-              className="pl-9 pr-4 py-2 text-sm bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-xl text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] w-full md:w-64 transition-all"
+              className="pl-9 pr-4 py-2.5 text-sm bg-[var(--color-surface-overlay)] border border-[var(--color-border)] rounded-xl text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full md:w-64 transition-all"
             />
           </div>
           
           <button 
-            onClick={() => navigate('/backtests')}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] rounded-xl hover:opacity-90 transition-all shadow-lg shadow-indigo-500/20 whitespace-nowrap"
+            onClick={() => navigate('/bots')}
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] rounded-xl transition-all shadow-lg shadow-[var(--color-primary)]/20 whitespace-nowrap"
           >
-            <Plus size={16} />
+            <Plus size={16} strokeWidth={2.5} />
             Create Bot
           </button>
           
-          <button className="p-2.5 rounded-xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] relative transition-colors">
-            <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-danger)] rounded-full"></span>
+          <button className="p-2.5 rounded-xl bg-[var(--color-surface-overlay)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-white relative transition-colors">
+            <Bell size={20} strokeWidth={2} />
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#EF4444] rounded-full ring-2 ring-[var(--color-surface-overlay)]"></span>
           </button>
         </div>
       </div>

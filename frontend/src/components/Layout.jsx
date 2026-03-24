@@ -25,16 +25,13 @@ export default function Layout() {
       {/* Sidebar */}
       <aside className="w-64 border-r border-[var(--color-border)] bg-[var(--color-surface-raised)] flex flex-col shrink-0">
         {/* Brand */}
-        <div className="p-5 border-b border-[var(--color-border)]">
+        <div className="p-5 border-b border-[var(--color-border)]/50">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] flex items-center justify-center shadow-md shadow-indigo-500/20">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m.75-9l3-3 2.148 2.148A12.061 12.061 0 0116.5 7.605" />
-              </svg>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] flex items-center justify-center shadow-lg shadow-purple-500/20">
+              <span className="text-white font-bold text-lg">N</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-[var(--color-text)]">Algo Kaisen</h1>
-              <p className="text-xs text-[var(--color-text-muted)]">Trading Platform</p>
+              <h1 className="text-[17px] font-bold text-white tracking-wide">Numatix</h1>
             </div>
           </div>
         </div>
@@ -46,35 +43,47 @@ export default function Layout() {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary-light)] shadow-sm'
-                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-overlay)]/50 hover:text-[var(--color-text)]'
+                    ? 'bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-primary)]/5 text-white'
+                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-overlay)]/40 hover:text-white'
                 }`
               }
             >
-              <item.icon size={20} />
-              {item.name}
+              {({ isActive }) => (
+                <>
+                  <item.icon size={18} className={isActive ? 'text-[var(--color-primary-light)]' : 'text-[var(--color-text-muted)]'} />
+                  {item.name}
+                  {isActive && (
+                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-[var(--color-primary-light)] shadow-[0_0_8px_rgba(167,139,250,0.8)]" />
+                  )}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
 
         {/* User info + logout */}
-        <div className="p-3 border-t border-[var(--color-border)]">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-[var(--color-surface-overlay)] flex items-center justify-center text-xs font-semibold text-[var(--color-primary-light)]">
-              {user?.email?.[0]?.toUpperCase() || '?'}
+        <div className="p-4 border-t border-[var(--color-border)]/50">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 border border-[var(--color-border)] rounded-full bg-[var(--color-surface-overlay)] flex items-center justify-center overflow-hidden shrink-0">
+              <span className="text-xs font-semibold text-white">
+                {user?.email?.[0]?.toUpperCase() || 'A'}
+              </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-[var(--color-text)] truncate">{user?.email || 'User'}</p>
+              <p className="text-sm font-semibold text-white truncate">{user?.email || 'Alex Trader'}</p>
+              <p className="text-xs text-[var(--color-text-muted)] truncate">Pro Plan</p>
             </div>
             <button
               onClick={handleLogout}
               title="Sign out"
-              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-surface-overlay)] hover:text-[var(--color-danger)] transition-all duration-200"
+              className="p-1.5 text-[var(--color-text-muted)] hover:text-white transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
               </svg>
             </button>
           </div>

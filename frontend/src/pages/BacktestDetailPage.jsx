@@ -105,15 +105,15 @@ export default function BacktestDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 mb-6 border-b border-[var(--color-border)]/50 pb-px overflow-x-auto">
+      <div className="flex items-center gap-2 mb-6 border-b border-[var(--color-border)]/50 pb-4 overflow-x-auto">
         {['Overview', 'Parameters', 'Statistics'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2.5 text-sm font-medium rounded-t-xl transition-all whitespace-nowrap ${
+            className={`px-4 py-2 text-sm font-medium rounded-full transition-all whitespace-nowrap ${
               activeTab === tab 
-                ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary-light)] border-b-2 border-[var(--color-primary)]' 
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-overlay)]/30 border-b-2 border-transparent'
+                ? 'bg-[var(--color-surface-overlay)] text-white shadow-sm' 
+                : 'text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-surface-overlay)]/30'
             }`}
           >
             {tab}
@@ -157,7 +157,7 @@ export default function BacktestDetailPage() {
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {Object.keys(parameters).length > 0 ? (
                 Object.entries(parameters).map(([key, val]) => (
-                  <div key={key} className="bg-[#111623] p-4 rounded-xl border border-[var(--color-border)]">
+                  <div key={key} className="bg-[var(--color-surface)] p-4 rounded-xl border border-[var(--color-border)]">
                     <p className="text-[10px] text-[var(--color-text-muted)] mb-1.5 uppercase tracking-wider font-semibold">{key.replace(/_/g, ' ')}</p>
                     <p className="text-sm font-medium text-[var(--color-text)]">
                       {typeof val === 'object' ? JSON.stringify(val) : String(val ?? '—')}
@@ -179,7 +179,7 @@ export default function BacktestDetailPage() {
             <div className="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {Object.keys(metrics).length > 0 ? (
                 Object.entries(metrics).map(([key, val]) => (
-                  <div key={key} className="bg-[#111623] p-4 rounded-xl border border-[var(--color-border)]">
+                  <div key={key} className="bg-[var(--color-surface)] p-4 rounded-xl border border-[var(--color-border)]">
                     <p className="text-[10px] text-[var(--color-text-muted)] mb-1.5 uppercase tracking-wider font-semibold">{key.replace(/_/g, ' ')}</p>
                     <p className={`text-sm font-medium ${
                       key.includes('return_pct') || key.includes('win_rate') || key.includes('profit_factor') ? 

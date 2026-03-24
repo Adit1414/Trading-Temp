@@ -81,7 +81,7 @@ export default function BacktestList({ searchQuery }) {
           return (
             <div
               key={bt.id}
-              className="bg-[#111827] border border-[var(--color-border)] rounded-2xl p-5 hover:border-[var(--color-primary)]/50 transition-colors shadow-lg"
+              className="bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-2xl p-6 hover:border-[var(--color-primary)]/50 transition-colors shadow-lg shadow-black/10"
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
@@ -96,7 +96,7 @@ export default function BacktestList({ searchQuery }) {
                     </p>
                   </div>
                 </div>
-                <div className={`px-2.5 py-1 rounded bg-[#1f2937] text-[10px] font-bold tracking-wide uppercase ${statusConfig.color}`}>
+                <div className={`px-2.5 py-1.5 rounded-md bg-[var(--color-surface-overlay)] text-[10px] font-bold tracking-widest uppercase ${statusConfig.color}`}>
                   {status}
                 </div>
               </div>
@@ -117,7 +117,7 @@ export default function BacktestList({ searchQuery }) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border)]">
+              <div className="flex items-center justify-between pt-5 mt-2 border-t border-[var(--color-border)]/50">
                 <div>
                   <p className="text-[10px] text-[var(--color-text-muted)] mb-1 uppercase tracking-wider font-semibold">Total Return</p>
                   <p className={`text-xl font-bold ${isPositive ? 'text-emerald-500' : isNegative ? 'text-red-500' : 'text-[var(--color-text)]'}`}>
