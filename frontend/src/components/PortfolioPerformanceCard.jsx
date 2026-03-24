@@ -17,12 +17,12 @@ const data = [
 
 export default function PortfolioPerformanceCard() {
   return (
-    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-[20px] p-6 md:p-8 shadow-xl shadow-black/20 mt-8">
-      <div className="mb-6">
-        <h3 className="text-xl font-bold text-[var(--color-text)]">Portfolio Performance (24h)</h3>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">Real-time portfolio value tracking</p>
+    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-2xl p-6 lg:p-8 shadow-lg shadow-black/10 flex flex-col">
+      <div className="mb-8">
+        <h3 className="text-xl font-bold text-[var(--color-text)] tracking-tight">Portfolio Performance (24h)</h3>
+        <p className="text-sm text-[var(--color-text-muted)] mt-1.5">Real-time portfolio value tracking</p>
       </div>
-      <div className="h-[300px] w-full">
+      <div className="h-[320px] w-full min-h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <defs>
